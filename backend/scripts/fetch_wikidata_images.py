@@ -51,25 +51,42 @@ RATE_LIMIT_SECONDS = 1.0
 PLAYER_SIZE = (200, 200)
 LOGO_MAX_SIZE = (256, 256)
 JPEG_QUALITY = 85
+IMAGE_DOWNLOAD_DEADLINE_SECONDS = 45
 
 # Q937857 = association football player.
 PLAYER_SPARQL = """
 SELECT ?item ?image WHERE {{
-  ?item rdfs:label "{name}"@en .
   ?item wdt:P106 wd:Q937857 .
-  OPTIONAL {{ ?item wdt:P18 ?image . }}
+  ?item wdt:P18 ?image .
+  {{ ?item rdfs:label "{name}"@en . }}
+  UNION
+  {{ ?item skos:altLabel "{name}"@en . }}
+  UNION
+  {{
+    ?item rdfs:label ?label .
+    FILTER(LANG(?label) = "en")
+    FILTER(CONTAINS(LCASE(STR(?label)), LCASE("{name}")))
+  }}
 }}
-LIMIT 5
+LIMIT 10
 """.strip()
 
 # Q476028 = association football club.
 CLUB_SPARQL = """
 SELECT ?item ?logo WHERE {{
-  ?item rdfs:label "{name}"@en .
   ?item wdt:P31/wdt:P279* wd:Q476028 .
-  OPTIONAL {{ ?item wdt:P154 ?logo . }}
+  ?item wdt:P154 ?logo .
+  {{ ?item rdfs:label "{name}"@en . }}
+  UNION
+  {{ ?item skos:altLabel "{name}"@en . }}
+  UNION
+  {{
+    ?item rdfs:label ?label .
+    FILTER(LANG(?label) = "en")
+    FILTER(CONTAINS(LCASE(STR(?label)), LCASE("{name}")))
+  }}
 }}
-LIMIT 5
+LIMIT 10
 """.strip()
 
 logging.basicConfig(
@@ -114,14 +131,28 @@ def sparql(query: str, attempt: int = 0) -> list[dict]:
 def download_image(image_url: str) -> bytes | None:
     """Wikidata P18 values look like
     'http://commons.wikimedia.org/wiki/Special:FilePath/Foo.jpg' — fetch directly."""
+    image_url = image_url.replace("http://", "https://", 1)
     try:
-        r = requests.get(image_url, headers={"User-Agent": USER_AGENT}, timeout=60)
+        with requests.get(
+            image_url,
+            headers={"User-Agent": USER_AGENT},
+            stream=True,
+            timeout=(10, 15),
+        ) as r:
+            if not r.ok:
+                return None
+            chunks: list[bytes] = []
+            started = time.monotonic()
+            for chunk in r.iter_content(chunk_size=64 * 1024):
+                if time.monotonic() - started > IMAGE_DOWNLOAD_DEADLINE_SECONDS:
+                    log.warning("Image download timed out (%s)", image_url)
+                    return None
+                if chunk:
+                    chunks.append(chunk)
+            return b"".join(chunks)
     except requests.RequestException as e:
         log.warning("Image download failed (%s): %s", image_url, e)
         return None
-    if not r.ok:
-        return None
-    return r.content
 
 
 def fetch_player_photo(name: str, out_path: Path) -> bool:
@@ -167,7 +198,7 @@ def fetch_team_logo(name: str, out_path: Path) -> bool:
     )
     if not image_url:
         return False
-    data = download_image(image_url)
+    data = download_image(_commons_thumbnail_url(image_url, LOGO_MAX_SIZE[0]))
     if not data:
         return False
     try:
@@ -189,6 +220,12 @@ def _escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _commons_thumbnail_url(image_url: str, width: int) -> str:
+    # Special:FilePath?width=N asks Wikimedia to rasterize SVG logos to PNG.
+    sep = "&" if "?" in image_url else "?"
+    return f"{image_url}{sep}width={width}"
+
+
 def load_metadata() -> dict[str, dict]:
     if not METADATA_PATH.exists():
         log.error("Missing %s — cannot run.", METADATA_PATH)
@@ -200,6 +237,7 @@ def load_metadata() -> dict[str, dict]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--limit", type=int, default=None, help="Cap how many players/teams to process.")
+    ap.add_argument("--start-index", type=int, default=0, help="Skip the first N players/teams before processing.")
     ap.add_argument("--players-only", action="store_true")
     ap.add_argument("--teams-only", action="store_true")
     args = ap.parse_args()
@@ -213,6 +251,8 @@ def main() -> None:
             (pid, m.get("name", "")) for pid, m in metadata.items() if m.get("name")
         )
         players = list(players)
+        if args.start_index:
+            players = players[args.start_index :]
         if args.limit is not None:
             players = players[: args.limit]
         log.info("Fetching photos for %d players → %s", len(players), PLAYERS_OUT)
@@ -224,6 +264,8 @@ def main() -> None:
 
     if do_teams:
         team_names = sorted({m.get("team", "") for m in metadata.values() if m.get("team")})
+        if args.start_index:
+            team_names = team_names[args.start_index :]
         if args.limit is not None:
             team_names = team_names[: args.limit]
         log.info("Fetching logos for %d teams → %s", len(team_names), TEAMS_OUT)

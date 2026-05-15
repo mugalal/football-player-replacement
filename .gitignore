@@ -213,6 +213,7 @@ data/*
 
 # Local Python environments and temp/cache directories
 .venv/
+.venv-wikidata/
 .tmp/
 
 # Generated model/data artifacts
@@ -235,6 +236,8 @@ frontend/dist/
 frontend/build/
 frontend/.env*
 !frontend/.env.local.example
+!frontend/lib/
+!frontend/lib/**
 frontend/tsconfig.tsbuildinfo
 
 # Backend service
