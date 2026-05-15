@@ -1,0 +1,55 @@
+"""
+Extract every unique StatsBomb positional label
+-----------------------------------------------
+
+• Scans all event JSON files in ./data
+• Collects every distinct "position.name"
+• Saves:
+    - models/gp1/shared/unique_positions.json
+    - models/gp1/shared/position_frequencies.json
+"""
+
+import json
+import glob
+import os
+from collections import Counter
+
+DATA_DIR = "data"
+OUT_UNIQUE = "models/gp1/shared/unique_positions.json"
+OUT_FREQS = "models/gp1/shared/position_frequencies.json"
+
+
+def main():
+    positions = Counter()
+
+    files = glob.glob(f"{DATA_DIR}/*.json")
+    print(f"Scanning {len(files)} match files...")
+
+    for path in files:
+        with open(path, encoding="utf-8") as f:
+            events = json.load(f)
+
+        for ev in events:
+            pos = ev.get("position", {}).get("name")
+            if pos:
+                positions[pos] += 1
+
+    unique_positions = sorted(list(positions.keys()))
+
+    os.makedirs("models/shared", exist_ok=True)
+
+    # ---- save unique list ----
+    with open(OUT_UNIQUE, "w", encoding="utf-8") as f:
+        json.dump(unique_positions, f, ensure_ascii=False, indent=2)
+
+    # ---- save full frequency table ----
+    with open(OUT_FREQS, "w", encoding="utf-8") as f:
+        json.dump(positions.most_common(), f, ensure_ascii=False, indent=2)
+
+    print("\nDone.")
+    print(f"Unique positions saved to: {OUT_UNIQUE}")
+    print(f"Frequencies saved to:      {OUT_FREQS}")
+
+
+if __name__ == "__main__":
+    main()

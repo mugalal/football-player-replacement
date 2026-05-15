@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "player-replacement"
+version = "0.0.0"
+description = "Player replacement AI model"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "pandas",
+    "gensim",
+    "numpy",
+    "umap-learn",
+    "scikit-learn",
+    "matplotlib",
+    "torch",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "notebook",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
