@@ -1,0 +1,37 @@
+# Local development stack.
+#
+# The frontend service is intentionally left commented out until the
+# frontend tree exists (Phase 2 of implementation). To run only the backend:
+#   docker compose up backend
+#
+# The backend build context is the PROJECT ROOT so the Dockerfile can copy
+# both backend/ and src/ in one go. The Dockerfile path is given explicitly.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:7860"
+    environment:
+      PORT: 7860
+      CORS_EXTRA_ORIGINS: "http://localhost:3000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./models:/app/models:ro
+      - ./backend/app/static:/app/backend/app/static
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7860/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: "http://localhost:8000"
+  #   depends_on:
+  #     - backend

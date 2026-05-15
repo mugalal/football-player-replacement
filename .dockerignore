@@ -1,0 +1,50 @@
+# Root .dockerignore — applied when docker-compose builds the backend with
+# project root as the build context.
+#
+# CRITICAL: models/ is excluded here. Local dev mounts ./models as a volume
+# (see docker-compose.yml); we do NOT want to send ~370MB of model files
+# into the build context on every backend rebuild.
+#
+# For Hugging Face Spaces deployment, use hf-space/.dockerignore instead —
+# that one does NOT exclude models/, because the HF image must contain them.
+
+.git/
+.gitattributes
+.github/
+.claude/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend artifacts
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Model artifacts — mounted at runtime in local dev.
+models/
+
+# Generated static images (the app handles their absence gracefully).
+backend/app/static/players/*
+backend/app/static/teams/*
+!backend/app/static/players/.gitkeep
+!backend/app/static/teams/.gitkeep
+
+# Notebooks and analysis output
+*.ipynb
+.ipynb_checkpoints/
+notebooks/
+visualizations/
+reports/
+presentation/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

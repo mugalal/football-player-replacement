@@ -1,0 +1,12 @@
+# Note: the effective ignore for backend builds is ROOT .dockerignore, since
+# the build context is the project root. This file is kept for clarity and
+# in case someone builds with the backend/ directory as the context.
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+tests/
+app/static/players/*
+app/static/teams/*
+!app/static/players/.gitkeep
+!app/static/teams/.gitkeep

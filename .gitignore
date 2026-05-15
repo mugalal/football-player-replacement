@@ -234,3 +234,13 @@ frontend/.next/
 frontend/dist/
 frontend/build/
 frontend/.env*
+!frontend/.env.local.example
+
+# Backend service
+backend/__pycache__/
+backend/.venv/
+backend/.pytest_cache/
+backend/app/static/players/*
+backend/app/static/teams/*
+!backend/app/static/players/.gitkeep
+!backend/app/static/teams/.gitkeep
