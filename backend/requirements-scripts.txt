@@ -1,0 +1,8 @@
+# Dependencies for optional helper scripts under backend/scripts/.
+# Not required to run the API; only install if you plan to use the scripts.
+#
+# Usage:
+#   pip install -r requirements-scripts.txt
+Pillow>=10.0
+requests>=2.31
+tqdm>=4.66
