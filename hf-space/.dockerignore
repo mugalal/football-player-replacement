@@ -1,0 +1,32 @@
+# .dockerignore for the Hugging Face Space repo.
+#
+# Copy this file to the ROOT of your HF Space repo alongside Dockerfile.
+#
+# CRITICAL: models/ is NOT excluded here, because the HF Space image MUST
+# contain the runtime model artifacts. (Contrast with the project's root
+# .dockerignore, which DOES exclude models/ since local docker-compose
+# mounts them as a read-only volume.)
+
+.git/
+.gitattributes
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Frontend / Node — the Space serves the backend only.
+node_modules/
+.next/
+
+# Generated static images — the runtime initials fallback handles their absence.
+backend/app/static/players/*
+backend/app/static/teams/*
+!backend/app/static/players/.gitkeep
+!backend/app/static/teams/.gitkeep
