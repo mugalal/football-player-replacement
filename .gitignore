@@ -235,6 +235,7 @@ frontend/dist/
 frontend/build/
 frontend/.env*
 !frontend/.env.local.example
+frontend/tsconfig.tsbuildinfo
 
 # Backend service
 backend/__pycache__/
