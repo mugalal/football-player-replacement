@@ -61,12 +61,6 @@ SELECT ?item ?image WHERE {{
   {{ ?item rdfs:label "{name}"@en . }}
   UNION
   {{ ?item skos:altLabel "{name}"@en . }}
-  UNION
-  {{
-    ?item rdfs:label ?label .
-    FILTER(LANG(?label) = "en")
-    FILTER(CONTAINS(LCASE(STR(?label)), LCASE("{name}")))
-  }}
 }}
 LIMIT 10
 """.strip()

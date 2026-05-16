@@ -146,16 +146,14 @@ curl http://localhost:8000/api/health
 curl http://localhost:8000/api/upgrades
 # {"onball":[...], "offball":[...]}
 
-curl "http://localhost:8000/api/players?q=man%C3%A9&limit=5"   # q=mané
+curl "http://localhost:8000/api/players?q=mane&limit=5"
 # [{"player_id":"3629","name":"Sadio Mané",...}]
+# The backend wrapper strips accents on both sides for matching, so
+# `q=mane`, `q=Mané`, and `q=MANE` all return Sadio Mané.
 
 curl http://localhost:8000/api/validations/mane
 # {"verdict":"EXCELLENT","mane_rank":5,...} after ~30-60s first call
 ```
-
-The engine's player matcher is plain lowercased-Unicode substring — use
-the accented form `q=mané` (URL-encoded `q=man%C3%A9`); plain `q=mane`
-returns no results because `'e' ≠ 'é'`.
 
 You can also run the original CLI regression check (uses `src/gp2/` directly,
 not through the API):
@@ -258,8 +256,12 @@ to 1 req/sec. Expect ~70% coverage for players, ~95% for teams, and
 - **Models are excluded from Git.** They live in `models/gp2/` and must
   be populated locally before running, or copied into the HF Space repo
   via Git LFS for deployment.
-- **The engine's player matcher is plain Unicode** — `q=mane` doesn't
-  match "Sadio Mané" because `'e' ≠ 'é'`. Use accented forms.
+- **The engine's raw matcher is plain Unicode.** The locked engine's
+  `list_available_players(q)` does `lower()` + substring, so `q=mane`
+  would miss "Sadio Mané". The backend's `/api/players` wraps this with
+  an in-memory accent-stripping index so `q=mane` works as expected
+  through the API. If you bypass the API and call the engine directly,
+  you need to use accented forms.
 
 ## Implementation plan
 

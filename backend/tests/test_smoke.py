@@ -5,12 +5,17 @@ We use FastAPI's TestClient (synchronous, simpler than httpx.AsyncClient for
 basic HTTP checks). TestClient triggers the app's lifespan when used as a
 context manager, so warm-up runs but is allowed to fail without breaking
 these tests — the endpoints under test are all model-independent.
+
+The accent-insensitive test is conditional on engine readiness so the suite
+still passes in CI / fresh clones without model artifacts.
 """
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services import engine
 
 
 def test_health_returns_200():
@@ -48,3 +53,18 @@ def test_filters_has_coming_soon():
             # Specific keys we promised in the spec:
             for k in ("min_age", "max_age", "leagues", "min_market_value", "max_market_value"):
                 assert k in body["coming_soon"]
+
+
+def test_players_search_is_accent_insensitive():
+    """`q=mane` must match `Sadio Mané`. Conditional on engine readiness
+    so the suite still passes when models are absent (e.g. fresh clones)."""
+    with TestClient(app) as client:
+        if not engine.engine_loaded():
+            pytest.skip("engine not loaded — models/gp2/ absent")
+        r = client.get("/api/players", params={"q": "mane", "limit": 10})
+        assert r.status_code == 200, r.text
+        rows = r.json()
+        names = [row["name"] for row in rows]
+        assert any("Mané" in n for n in names), (
+            f"Expected 'Mané' in results for q=mane, got: {names}"
+        )

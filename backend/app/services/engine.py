@@ -45,7 +45,18 @@ except Exception as e:  # pragma: no cover — only fires if src/ is missing
     logger.error("Engine import failed:\n%s", traceback.format_exc())
 
 
-_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="engine")
+# Shared single-worker executor. Lazily (re)created so that a shutdown
+# during one app lifespan doesn't permanently kill the executor for a
+# subsequent lifespan in the same process — important for pytest's
+# TestClient pattern, where each test may open a fresh TestClient.
+_executor: ThreadPoolExecutor | None = None
+
+
+def _ensure_executor() -> ThreadPoolExecutor:
+    global _executor
+    if _executor is None:
+        _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="engine")
+    return _executor
 
 
 def engine_loaded() -> bool:
@@ -61,8 +72,13 @@ def set_state(state: str, message: str | None = None) -> None:
 async def run_engine(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """Run a CPU-bound engine function on the shared single-worker executor."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(_executor, lambda: fn(*args, **kwargs))
+    return await loop.run_in_executor(_ensure_executor(), lambda: fn(*args, **kwargs))
 
 
 def shutdown_executor() -> None:
-    _executor.shutdown(wait=False, cancel_futures=False)
+    """Stop the executor. Safe to call multiple times; a later run_engine
+    call will lazily create a fresh executor."""
+    global _executor
+    if _executor is not None:
+        _executor.shutdown(wait=False, cancel_futures=False)
+        _executor = None

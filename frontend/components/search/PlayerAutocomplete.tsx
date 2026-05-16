@@ -74,8 +74,7 @@ export function PlayerAutocomplete({
           )}
           {data && data.length === 0 && (
             <div className="p-3 text-sm text-muted-foreground">
-              No matches. Note: engine matching is plain-Unicode — try the
-              accented form (e.g. <span className="font-mono">Mané</span>).
+              No matches.
             </div>
           )}
           {data && data.length > 0 && (

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.deps import require_engine
-from app.services import engine
+from app.services import engine, player_index
 from app.services.images import logo_url_for, photo_url_for
 
 logger = logging.getLogger(__name__)
@@ -25,14 +25,20 @@ def _attach_images(p: dict[str, Any], request: Request) -> dict[str, Any]:
 @router.get("/players")
 async def list_players(
     request: Request,
-    q: str = Query("", description="Substring match (case-insensitive, Unicode-exact)."),
+    q: str = Query("", description="Accent- and case-insensitive substring match on player name."),
     limit: int = Query(20, ge=1, le=50),
     _: None = Depends(require_engine),
 ) -> list[dict[str, Any]]:
+    # Use the local accent-insensitive index instead of calling the engine
+    # directly: the engine's matcher does plain Unicode substring, so
+    # `q=mane` would miss "Sadio Mané". The index pulls the full player
+    # list once via the engine (cheap, no inference), pre-strips accents,
+    # then matches in pure Python.
     try:
-        results = await engine.run_engine(engine.scouting_engine.list_available_players, q, limit)
+        await player_index.ensure_built()
+        results = player_index.search(q, limit)
     except Exception as e:
-        logger.exception("list_available_players failed")
+        logger.exception("/api/players failed")
         raise HTTPException(500, detail=str(e))
     return [_attach_images(p, request) for p in results]
 
