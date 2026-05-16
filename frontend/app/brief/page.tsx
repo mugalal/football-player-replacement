@@ -128,13 +128,18 @@ function BriefPageInner() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Scouting Brief</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pool multiple sources into a single target profile, then search for who fits.
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+        <header className="mb-8 max-w-2xl">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            Multi-source · weighted pooling
+          </span>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Scouting Brief</h1>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Pool several source players into a single target profile, then search
+            for who fits. Use this when you&apos;re replacing a role, not just
+            one name.
           </p>
-        </div>
+        </header>
 
         {preset === "mane" && (
           <div className="mb-6 rounded-md border border-primary/40 bg-primary/5 p-4">
@@ -170,13 +175,18 @@ function BriefPageInner() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
           {/* LEFT RAIL */}
-          <aside className="space-y-6">
+          <aside className="space-y-7 lg:sticky lg:top-20 lg:self-start max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                Sources ({sources.length})
-              </h3>
+              <div className="flex items-baseline justify-between mb-2.5">
+                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Sources
+                </h3>
+                <span className="text-[10px] font-mono text-muted-foreground" data-numeric>
+                  {sources.length} player{sources.length === 1 ? "" : "s"}
+                </span>
+              </div>
               <div className="space-y-2">
                 {sources.map((s) => (
                   <PlayerCard
@@ -218,15 +228,22 @@ function BriefPageInner() {
             </section>
 
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                Upgrades ({selectedKeys.length})
-              </h3>
+              <div className="flex items-baseline justify-between mb-2.5">
+                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Upgrades
+                </h3>
+                {selectedKeys.length > 0 && (
+                  <span className="text-[10px] font-mono text-primary" data-numeric>
+                    {selectedKeys.length} selected
+                  </span>
+                )}
+              </div>
               <UpgradePicker selected={selectedUpgrades} onToggle={onToggleUpgrade} />
             </section>
 
             {selectedKeys.length > 0 && (
               <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
                   Intensity
                 </h3>
                 <IntensityControl
@@ -245,7 +262,7 @@ function BriefPageInner() {
 
             <FilterSidebar value={filters} onChange={setFilters} />
 
-            <Button onClick={onSearch} disabled={!canSearch} className="w-full">
+            <Button onClick={onSearch} disabled={!canSearch} className="w-full" size="lg">
               {state.status === "submitting" || state.status === "polling" ? (
                 "Searching…"
               ) : (

@@ -8,7 +8,6 @@ import { ResultsTable } from "@/components/search/ResultsTable";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { cn as cnUtil } from "@/lib/utils";
 import { getManeValidation } from "@/lib/api/validations";
 import type { Verdict } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -22,35 +21,40 @@ const KLOPP_UPGRADES: Record<string, number> = {
   pressing: 0.7,
 };
 
-const VERDICT_STYLES: Record<Verdict, { tone: string; Icon: typeof CheckCircle2 }> = {
-  EXCELLENT: { tone: "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5", Icon: CheckCircle2 },
-  STRONG:    { tone: "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5", Icon: CheckCircle2 },
-  ACCEPTABLE:{ tone: "text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/5", Icon: AlertTriangle },
-  MARGINAL:  { tone: "text-amber-600 dark:text-amber-400 border-amber-500/40 bg-amber-500/5", Icon: AlertTriangle },
-  FAIL:      { tone: "text-destructive border-destructive/40 bg-destructive/5", Icon: XCircle },
+const VERDICT_STYLES: Record<Verdict, { tone: string; ring: string; Icon: typeof CheckCircle2 }> = {
+  EXCELLENT:  { tone: "text-emerald-700 dark:text-emerald-300", ring: "border-emerald-500/40 bg-emerald-500/5", Icon: CheckCircle2 },
+  STRONG:     { tone: "text-emerald-700 dark:text-emerald-300", ring: "border-emerald-500/40 bg-emerald-500/5", Icon: CheckCircle2 },
+  ACCEPTABLE: { tone: "text-amber-700 dark:text-amber-300",     ring: "border-amber-500/40 bg-amber-500/5",     Icon: AlertTriangle },
+  MARGINAL:   { tone: "text-amber-700 dark:text-amber-300",     ring: "border-amber-500/40 bg-amber-500/5",     Icon: AlertTriangle },
+  FAIL:       { tone: "text-destructive",                       ring: "border-destructive/40 bg-destructive/5", Icon: XCircle },
 };
 
 export default function ManeValidationPage() {
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["mane-validation"],
     queryFn: getManeValidation,
-    // Backend caches on its side; we keep the result cached client-side too.
     staleTime: Infinity,
     retry: false,
   });
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mané Validation</h1>
-          <p className="mt-1 text-sm text-muted-foreground max-w-3xl">
-            Regression check: given Liverpool&apos;s 2015-16 attacking pool and Klopp-style
-            upgrades, the methodology should rank Sadio Mané — Liverpool&apos;s actual 2016
-            signing — high among the attacking candidates from the full ~2,200 player dataset.
-            Defensive positions are filtered out (Klopp&apos;s brief was for an attacker).
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <header className="max-w-3xl">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              Locked regression
+            </span>
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Mané Validation</h1>
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+            Given Liverpool&apos;s 2015-16 attacking pool and Klopp-style upgrades,
+            the methodology should rank Sadio Mané — Liverpool&apos;s actual 2016
+            signing — high among attacking candidates from the full ~2,200 player
+            dataset. Defensive positions are filtered out: Klopp&apos;s brief was for
+            an attacker.
           </p>
-        </div>
+        </header>
 
         {(isLoading || isFetching) && !data && (
           <Card>
@@ -80,17 +84,23 @@ export default function ManeValidationPage() {
 
         {data && (
           <>
-            <VerdictBanner verdict={data.verdict} description={data.verdict_description} rank={data.mane_rank} />
+            <VerdictHero
+              verdict={data.verdict}
+              description={data.verdict_description}
+              rank={data.mane_rank}
+              candidatePool={data.candidates.length}
+              defendersFiltered={data.filtered_defender_count}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <CardTitle className="text-base">
-                      Top {data.candidates.length} attackers (defenders filtered)
+                      Top {data.candidates.length} attackers
                     </CardTitle>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {data.filtered_defender_count} defenders removed
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+                      Defenders filtered
                     </Badge>
                   </div>
                   <ResultsTable
@@ -101,19 +111,19 @@ export default function ManeValidationPage() {
                 </CardContent>
               </Card>
 
-              <div className="space-y-4">
+              <aside className="space-y-4">
                 <Card>
                   <CardContent className="p-5">
                     <CardTitle className="text-sm">Source pool</CardTitle>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       Liverpool 2015-16 attackers
                     </p>
-                    <ul className="mt-3 space-y-1 text-sm">
+                    <ul className="mt-3 space-y-1.5 text-sm">
                       {data.query.sources.map((s) => (
-                        <li key={s.player_id} className="flex justify-between gap-2">
-                          <span className="truncate">{s.name}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {s.primary_position}
+                        <li key={s.player_id} className="flex justify-between gap-2 leading-tight">
+                          <span className="truncate font-medium">{s.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0 self-center font-mono uppercase tracking-wider">
+                            {s.primary_position.split(" ").map(w => w[0]).join("")}
                           </span>
                         </li>
                       ))}
@@ -123,17 +133,25 @@ export default function ManeValidationPage() {
 
                 <Card>
                   <CardContent className="p-5">
-                    <CardTitle className="text-sm">Klopp upgrade profile</CardTitle>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <CardTitle className="text-sm">Klopp upgrades</CardTitle>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       Per-upgrade probabilities (regression checkpoint)
                     </p>
-                    <ul className="mt-3 space-y-1 text-sm">
+                    <ul className="mt-3 space-y-2">
                       {Object.entries(KLOPP_UPGRADES).map(([k, v]) => (
-                        <li key={k} className="flex justify-between gap-2">
-                          <span className="truncate">{k.replace(/_/g, " ")}</span>
-                          <span className="font-mono text-xs text-muted-foreground" data-numeric>
-                            {(v * 100).toFixed(0)}%
-                          </span>
+                        <li key={k} className="space-y-1">
+                          <div className="flex justify-between gap-2 text-xs">
+                            <span className="capitalize">{k.replace(/_/g, " ")}</span>
+                            <span className="font-mono text-muted-foreground tabular-nums" data-numeric>
+                              {(v * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="h-1 rounded-full bg-secondary overflow-hidden">
+                            <div
+                              className="h-full bg-primary/70 rounded-full"
+                              style={{ width: `${v * 100}%` }}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -142,11 +160,11 @@ export default function ManeValidationPage() {
 
                 <Link
                   href="/brief?preset=mane"
-                  className={cnUtil(buttonVariants({ variant: "outline" }), "w-full")}
+                  className={cn(buttonVariants({ variant: "outline" }), "w-full")}
                 >
                   Open in scouting brief <ArrowRight className="h-4 w-4" />
                 </Link>
-              </div>
+              </aside>
             </div>
           </>
         )}
@@ -155,31 +173,55 @@ export default function ManeValidationPage() {
   );
 }
 
-function VerdictBanner({
+function VerdictHero({
   verdict,
   description,
   rank,
+  candidatePool,
+  defendersFiltered,
 }: {
   verdict: Verdict;
   description: string;
   rank: number | null;
+  candidatePool: number;
+  defendersFiltered: number;
 }) {
-  const { tone, Icon } = VERDICT_STYLES[verdict];
+  const { tone, ring, Icon } = VERDICT_STYLES[verdict];
   return (
-    <div className={cn("rounded-lg border p-5", tone)}>
-      <div className="flex items-start gap-3">
-        <Icon className="h-6 w-6 shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg font-semibold tracking-tight">{verdict}</h2>
-            {rank !== null && (
-              <Badge variant="outline" className="text-xs">
-                Mané attacker rank #{rank}
-              </Badge>
-            )}
+    <div className={cn("rounded-xl border p-6 sm:p-8", ring)}>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 items-center">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon className={cn("h-5 w-5", tone)} />
+            <span className={cn("text-[11px] font-mono uppercase tracking-wider", tone)}>
+              Verdict
+            </span>
           </div>
-          <p className="mt-1 text-sm">{description}</p>
+          <h2 className={cn("text-3xl sm:text-4xl font-semibold tracking-tight", tone)}>
+            {verdict}
+          </h2>
+          <p className="mt-2 text-sm text-foreground/80 max-w-xl leading-relaxed">
+            {description}
+          </p>
         </div>
+
+        {rank !== null && (
+          <div className="flex sm:flex-col items-center sm:items-end gap-4 sm:gap-1 sm:text-right">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Mané rank
+              </div>
+              <div className={cn("text-5xl sm:text-6xl font-semibold font-mono tabular-nums", tone)} data-numeric>
+                #{rank}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground font-mono tabular-nums" data-numeric>
+              of {candidatePool} attackers
+              <span className="mx-1.5 opacity-50">·</span>
+              {defendersFiltered} defenders filtered
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
