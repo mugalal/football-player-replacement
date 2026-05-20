@@ -6,12 +6,16 @@ writes them under backend/app/static/{players,teams}/. The web app works
 fully WITHOUT this — PlayerAvatar falls back to deterministic initials when
 files are missing.
 
-Expected runtime: ~30–60 minutes for the full ~2,200-player dataset (longer
-because of the TheSportsDB fallback request on Wikidata misses).
-Coverage seen in practice: ~90%+ players (Wikidata ~70% + TheSportsDB
-fallback fills most of the rest for Big-5 men's footballers), ~95% teams.
-Resumable — existing files are skipped, so re-running fills gaps without
-re-downloading.
+Expected runtime: ~45–90 minutes for the full ~2,200-player dataset (longer
+because of the three-source fallback chain on misses).
+Image sources tried in order:
+  1) Wikidata (strict label + altLabel) — preferred, freely licensed
+  2) Wikipedia search (full-text "{name} footballer", returns page image) —
+     lenient matching, catches players whose Wikidata label is shorter
+  3) TheSportsDB — final fallback
+Coverage seen in practice: ~95%+ players for Big-5 men's footballers,
+~95% teams. Resumable — existing files are skipped, so re-running fills
+gaps without re-downloading.
 
 Usage:
     pip install -r backend/requirements-scripts.txt
@@ -51,6 +55,13 @@ WIKIMEDIA_FILE = "https://commons.wikimedia.org/wiki/Special:FilePath/{name}"
 # endpoint as a fallback when Wikidata returns no P18 image. The "/3/" key is
 # the documented public/test key.
 THESPORTSDB_SEARCH = "https://www.thesportsdb.com/api/v1/json/3/searchplayers.php"
+# Wikipedia search API with `pageimages` is a third fallback. Full-text
+# search is far more lenient with name variants than Wikidata's strict
+# label matching, so this catches players whose Wikipedia article is the
+# short form ("José Callejón") even when our metadata has the formal full
+# name ("José María Callejón Bueno"). Returns the page's main image
+# (usually the infobox portrait) when one exists.
+WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 USER_AGENT = (
     "ReplacementScoutBot/0.1 (https://github.com/mugalal/football-player-replacement; "
     "academic/portfolio use)"
@@ -159,6 +170,42 @@ def download_image(image_url: str) -> bytes | None:
         return None
 
 
+def wikipedia_player_image(name: str) -> str | None:
+    """Search Wikipedia for a footballer page; return its main image URL or None."""
+    try:
+        r = requests.get(
+            WIKIPEDIA_API,
+            params={
+                "action": "query",
+                "format": "json",
+                "prop": "pageimages",
+                "piprop": "original",
+                "generator": "search",
+                "gsrsearch": f"{name} footballer",
+                "gsrlimit": 3,
+            },
+            headers={"User-Agent": USER_AGENT},
+            timeout=15,
+        )
+    except requests.RequestException as e:
+        log.warning("Wikipedia network error: %s", e)
+        return None
+    if not r.ok:
+        return None
+    try:
+        payload = r.json()
+    except ValueError:
+        return None
+    pages = (payload.get("query") or {}).get("pages") or {}
+    # API returns pages keyed by pageid. Iterate and take the first one with
+    # an `original` (full-resolution) image.
+    for page in pages.values():
+        original = page.get("original")
+        if isinstance(original, dict) and original.get("source"):
+            return original["source"]
+    return None
+
+
 def thesportsdb_player_image(name: str) -> str | None:
     """Search TheSportsDB for a footballer image URL. Returns None on miss."""
     try:
@@ -206,7 +253,13 @@ def fetch_player_photo(name: str, out_path: Path) -> bool:
         (row["image"]["value"] for row in rows if "image" in row),
         None,
     )
-    # 2) Fallback to TheSportsDB if Wikidata had nothing.
+    # 2) Fallback to Wikipedia search (lenient name matching — typically
+    # the biggest coverage win for players whose formal name doesn't match
+    # the Wikidata label).
+    if not image_url:
+        image_url = wikipedia_player_image(name)
+        time.sleep(RATE_LIMIT_SECONDS)
+    # 3) Final fallback: TheSportsDB.
     if not image_url:
         image_url = thesportsdb_player_image(name)
         time.sleep(RATE_LIMIT_SECONDS)
