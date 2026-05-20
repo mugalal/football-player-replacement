@@ -78,7 +78,7 @@ export function PlayerAutocomplete({
             </div>
           )}
           {data && data.length > 0 && (
-            <ul role="listbox" className="max-h-80 overflow-auto py-1">
+            <ul role="listbox" className="max-h-96 overflow-auto py-1">
               {data.map((p) => (
                 <li key={p.player_id}>
                   <button
@@ -90,13 +90,13 @@ export function PlayerAutocomplete({
                       setOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors",
+                      "w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors",
                     )}
                   >
                     <PlayerAvatar
                       photoUrl={p.photo_url}
                       name={p.name}
-                      size="sm"
+                      size="md"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">{p.name}</div>
@@ -104,7 +104,7 @@ export function PlayerAutocomplete({
                         {p.primary_position} · {p.team}
                       </div>
                     </div>
-                    <div className="text-xs font-mono text-muted-foreground shrink-0">
+                    <div className="text-xs font-mono text-muted-foreground shrink-0" data-numeric>
                       {p.num_matches}m
                     </div>
                   </button>

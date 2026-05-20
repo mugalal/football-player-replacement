@@ -16,11 +16,12 @@ import asyncio
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.deps import require_engine
 from app.services import engine
 from app.services.heatmap import NUM_ZONES, aggregate_heatmap, player_heatmap
+from app.services.images import logo_url_for, photo_url_for
 from app.services.mane_preset import (
     DEFENDER_POSITIONS,
     KLOPP_UPGRADES_VALIDATED,
@@ -121,7 +122,10 @@ _mane_heatmap_lock = asyncio.Lock()
 
 
 @router.get("/validations/mane/heatmap")
-async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
+async def mane_heatmap(
+    request: Request,
+    _: None = Depends(require_engine),
+) -> dict[str, Any]:
     """
     Heatmaps for the Mané validation explainer:
       - `pool`: aggregated zone counts across the 6 Liverpool 2015-16 attackers
@@ -136,10 +140,10 @@ async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
     """
     global _mane_heatmap_cache
     if _mane_heatmap_cache is not None:
-        return _mane_heatmap_cache
+        return _enrich_heatmap_response(_mane_heatmap_cache, request)
     async with _mane_heatmap_lock:
         if _mane_heatmap_cache is not None:
-            return _mane_heatmap_cache
+            return _enrich_heatmap_response(_mane_heatmap_cache, request)
 
         # Resolve the 6 source player names → player_ids via the engine's
         # name lookup (this is cheap — no model inference required, just a
@@ -181,6 +185,9 @@ async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
                 counts = await player_heatmap(str(cid))
                 if counts is None:
                     continue
+                # Photo URLs are NOT cached here — they're attached at response
+                # time below because the base URL depends on the current
+                # request (different deploy host, different scheme, etc.).
                 top_candidates.append({
                     "player_id": cid,
                     "name": c.get("name"),
@@ -217,4 +224,28 @@ async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
             "num_y": 3,
             "num_zones": NUM_ZONES,
         }
-        return _mane_heatmap_cache
+
+    return _enrich_heatmap_response(_mane_heatmap_cache, request)
+
+
+def _enrich_heatmap_response(cached: dict[str, Any], request: Request) -> dict[str, Any]:
+    """Attach per-request image URLs to the cached heatmap response.
+
+    Image URLs include the request's base URL, so they MUST be computed per
+    request (different deploy hosts, schemes, ports). We never mutate the
+    cache itself.
+    """
+    enriched_candidates = []
+    for c in cached.get("top_candidates", []):
+        c2 = dict(c)
+        c2["photo_url"] = photo_url_for(str(c.get("player_id") or ""), request)
+        c2["team_logo_url"] = logo_url_for(c.get("team"), request)
+        enriched_candidates.append(c2)
+    return {
+        **cached,
+        "top_candidates": enriched_candidates,
+        "mane": {
+            **cached.get("mane", {}),
+            "photo_url": photo_url_for(str(cached.get("mane", {}).get("player_id") or ""), request),
+        },
+    }

@@ -9,13 +9,25 @@ interface ResultsTableProps {
   candidates: Candidate[];
   showAttackerRank?: boolean;
   highlightName?: string;
+  /** When true, callers have already rendered ranks 1–3 above (e.g. as a podium). */
+  skipTop3?: boolean;
 }
 
 export function ResultsTable({
   candidates,
   showAttackerRank,
   highlightName,
+  skipTop3,
 }: ResultsTableProps) {
+  const visible = skipTop3
+    ? candidates.filter((c) => {
+        const r = showAttackerRank && c.attacker_rank ? c.attacker_rank : c.rank;
+        return r > 3;
+      })
+    : candidates;
+
+  if (visible.length === 0) return null;
+
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
       <table className="w-full text-sm">
@@ -39,7 +51,7 @@ export function ResultsTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
-          {candidates.map((c) => {
+          {visible.map((c) => {
             const rank = showAttackerRank && c.attacker_rank ? c.attacker_rank : c.rank;
             const isHighlighted =
               highlightName && c.name.toLowerCase().includes(highlightName.toLowerCase());
@@ -65,7 +77,7 @@ export function ResultsTable({
                     {rank}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   <Link
                     href={`/player/${encodeURIComponent(c.player_id)}`}
                     className="flex items-center gap-3 group/link"
@@ -73,7 +85,7 @@ export function ResultsTable({
                     <PlayerAvatar
                       photoUrl={c.photo_url}
                       name={c.name}
-                      size="sm"
+                      size="md"
                     />
                     <div className="min-w-0">
                       <div className="font-medium group-hover/link:text-primary transition-colors truncate">

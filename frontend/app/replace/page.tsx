@@ -7,6 +7,7 @@ import { ProgressIndicator } from "@/components/common/ProgressIndicator";
 import { AppShell } from "@/components/layout/AppShell";
 import { FilterSidebar, DEFAULT_FILTERS, filterStateToBackend, type FilterState } from "@/components/search/FilterSidebar";
 import { IntensityControl } from "@/components/search/IntensityControl";
+import { CandidatePodium } from "@/components/search/CandidatePodium";
 import { PlayerAutocomplete } from "@/components/search/PlayerAutocomplete";
 import { ResultsTable } from "@/components/search/ResultsTable";
 import { SourcePlayerHero } from "@/components/search/SourcePlayerHero";
@@ -190,7 +191,10 @@ export default function ReplacePage() {
                     description="Try loosening filters or removing some upgrades."
                   />
                 ) : (
-                  <ResultsTable candidates={state.result.candidates} />
+                  <>
+                    <CandidatePodium candidates={state.result.candidates} />
+                    <ResultsTable candidates={state.result.candidates} skipTop3 />
+                  </>
                 )}
               </>
             )}

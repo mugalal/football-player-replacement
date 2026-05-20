@@ -36,25 +36,36 @@ export function SimilarPlayersList({ playerId, topK = 10 }: SimilarPlayersListPr
   }
 
   return (
-    <ul className="divide-y divide-border rounded-md border border-border overflow-hidden">
+    <ul className="space-y-1.5">
       {data.map((c) => (
         <li key={c.player_id}>
           <Link
             href={`/player/${encodeURIComponent(c.player_id)}`}
-            className="flex items-center gap-3 px-3 py-2.5 hover:bg-accent transition-colors"
+            className="flex items-center gap-3 rounded-md border border-border/60 bg-card/40 hover:bg-accent hover:border-primary/30 p-2 transition-colors"
           >
-            <span className="text-xs font-mono text-muted-foreground w-5 text-right" data-numeric>
+            <span
+              className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[10px] font-mono text-muted-foreground bg-muted shrink-0"
+              data-numeric
+            >
               {c.rank}
             </span>
-            <PlayerAvatar photoUrl={c.photo_url} name={c.name} size="sm" />
+            <PlayerAvatar photoUrl={c.photo_url} name={c.name} size="md" />
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">{c.name}</div>
-              <div className="text-xs text-muted-foreground truncate">
+              <div className="text-sm font-medium truncate leading-tight">{c.name}</div>
+              <div className="text-[11px] text-muted-foreground truncate mt-0.5">
                 {c.primary_position} · {c.team}
               </div>
             </div>
-            <div className="text-xs font-mono text-muted-foreground shrink-0" data-numeric>
-              {fmtPct(c.similarity, 1)}
+            <div className="shrink-0 text-right">
+              <div className="text-xs font-mono font-medium text-foreground tabular-nums" data-numeric>
+                {fmtPct(c.similarity, 1)}
+              </div>
+              <div className="mt-1 h-1 w-12 rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full bg-primary/70"
+                  style={{ width: `${Math.max(0, Math.min(100, c.similarity * 100))}%` }}
+                />
+              </div>
             </div>
           </Link>
         </li>

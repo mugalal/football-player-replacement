@@ -118,11 +118,17 @@ export interface CandidateHeatmap {
   counts: number[];
   total: number;
   is_mane: boolean;
+  photo_url?: string | null;
+  team_logo_url?: string | null;
+}
+
+export interface ManeHeatmapSlice extends HeatmapSlice {
+  photo_url?: string | null;
 }
 
 export interface ManeHeatmapResponse {
   pool: HeatmapSlice;
-  mane: HeatmapSlice;
+  mane: ManeHeatmapSlice;
   top_candidates: CandidateHeatmap[];
   num_x: number;
   num_y: number;

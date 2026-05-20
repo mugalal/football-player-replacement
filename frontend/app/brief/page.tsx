@@ -17,6 +17,7 @@ import {
 import { IntensityControl } from "@/components/search/IntensityControl";
 import { PlayerAutocomplete } from "@/components/search/PlayerAutocomplete";
 import { PlayerCard } from "@/components/search/PlayerCard";
+import { CandidatePodium } from "@/components/search/CandidatePodium";
 import { ResultsTable } from "@/components/search/ResultsTable";
 import { UpgradePicker } from "@/components/search/UpgradePicker";
 import { Button } from "@/components/ui/button";
@@ -320,10 +321,17 @@ function BriefPageInner() {
                 {state.result.candidates.length === 0 ? (
                   <EmptyState title="No candidates matched" description="Try loosening filters." />
                 ) : (
-                  <ResultsTable
-                    candidates={state.result.candidates}
-                    highlightName={preset === "mane" ? "Mané" : undefined}
-                  />
+                  <>
+                    <CandidatePodium
+                      candidates={state.result.candidates}
+                      highlightName={preset === "mane" ? "Mané" : undefined}
+                    />
+                    <ResultsTable
+                      candidates={state.result.candidates}
+                      highlightName={preset === "mane" ? "Mané" : undefined}
+                      skipTop3
+                    />
+                  </>
                 )}
               </>
             )}

@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { PitchHeatmap } from "@/components/player/PitchHeatmap";
+import { PlayerAvatar } from "@/components/player/PlayerAvatar";
 import { ResultsTable } from "@/components/search/ResultsTable";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -126,14 +127,25 @@ export default function ManeValidationPage() {
                         subtitle={heatmap.pool.source_names?.join(" · ") ?? heatmap.pool.label}
                       />
                       {heatmap.mane.counts && heatmap.mane.counts.length > 0 ? (
-                        <PitchHeatmap
-                          counts={heatmap.mane.counts}
-                          total={heatmap.mane.total}
-                          numX={heatmap.num_x}
-                          numY={heatmap.num_y}
-                          title="Sadio Mané"
-                          subtitle="Southampton, 2015-16"
-                        />
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <PlayerAvatar
+                              photoUrl={heatmap.mane.photo_url}
+                              name="Sadio Mané"
+                              size="lg"
+                            />
+                            <div>
+                              <h4 className="text-sm font-semibold tracking-tight">Sadio Mané</h4>
+                              <p className="text-[11px] text-muted-foreground">Southampton · 2015-16</p>
+                            </div>
+                          </div>
+                          <PitchHeatmap
+                            counts={heatmap.mane.counts}
+                            total={heatmap.mane.total}
+                            numX={heatmap.num_x}
+                            numY={heatmap.num_y}
+                          />
+                        </div>
                       ) : (
                         <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
                           Mané heatmap unavailable — player not resolved in the dataset.
@@ -166,13 +178,47 @@ export default function ManeValidationPage() {
                                 : "border-border",
                             )}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[11px] font-mono bg-muted text-muted-foreground" data-numeric>
+                            <div className="flex items-center justify-between mb-2.5">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[11px] font-mono",
+                                  c.is_mane
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground",
+                                )}
+                                data-numeric
+                              >
                                 #{c.attacker_rank}
                               </span>
-                              <span className="font-mono text-[10px] text-muted-foreground tabular-nums" data-numeric>
+                              <span
+                                className={cn(
+                                  "font-mono text-[11px] tabular-nums",
+                                  c.is_mane
+                                    ? "text-primary font-semibold"
+                                    : "text-muted-foreground",
+                                )}
+                                data-numeric
+                              >
                                 {(c.similarity * 100).toFixed(1)}%
                               </span>
+                            </div>
+                            <div className="flex items-center gap-2.5 mb-2.5">
+                              <PlayerAvatar
+                                photoUrl={c.photo_url}
+                                name={c.name}
+                                size="md"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-semibold truncate leading-tight" title={c.name}>
+                                  {c.name}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                  {c.primary_position}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground/80 truncate">
+                                  {c.team}
+                                </div>
+                              </div>
                             </div>
                             <PitchHeatmap
                               counts={c.counts}
@@ -180,14 +226,6 @@ export default function ManeValidationPage() {
                               numX={heatmap.num_x}
                               numY={heatmap.num_y}
                             />
-                            <div className="mt-2.5">
-                              <div className="text-xs font-medium truncate" title={c.name}>
-                                {c.name}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                {c.primary_position} · {c.team}
-                              </div>
-                            </div>
                           </Link>
                         ))}
                       </div>
