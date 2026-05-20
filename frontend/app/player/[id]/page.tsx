@@ -7,12 +7,13 @@ import { useParams } from "next/navigation";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AppShell } from "@/components/layout/AppShell";
+import { PitchHeatmap } from "@/components/player/PitchHeatmap";
 import { PlayerHeader } from "@/components/player/PlayerHeader";
 import { SimilarPlayersList } from "@/components/player/SimilarPlayersList";
 import { PositionDistributionChart } from "@/components/search/PositionDistributionChart";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { getPlayer } from "@/lib/api/players";
+import { getPlayer, getPlayerHeatmap } from "@/lib/api/players";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,14 @@ export default function PlayerPage() {
     queryKey: ["player", id],
     queryFn: () => getPlayer(id),
     enabled: !!id,
+  });
+
+  const { data: heatmap } = useQuery({
+    queryKey: ["player-heatmap", id],
+    queryFn: () => getPlayerHeatmap(id),
+    enabled: !!id && !!data,
+    staleTime: Infinity,
+    retry: false,
   });
 
   return (
@@ -58,12 +67,29 @@ export default function PlayerPage() {
             <PlayerHeader player={data} />
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <CardTitle className="text-base mb-4">Position distribution</CardTitle>
-                  <PositionDistributionChart distribution={data.position_distribution} />
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <CardTitle className="text-base mb-4">Position distribution</CardTitle>
+                    <PositionDistributionChart distribution={data.position_distribution} />
+                  </CardContent>
+                </Card>
+
+                {heatmap && heatmap.total > 0 && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <PitchHeatmap
+                        counts={heatmap.counts}
+                        total={heatmap.total}
+                        numX={heatmap.num_x}
+                        numY={heatmap.num_y}
+                        title="Pitch heatmap"
+                        subtitle={`Aggregated on-ball + off-ball actions across ${data.num_matches} matches`}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
 
               <Card>
                 <CardContent className="p-6">

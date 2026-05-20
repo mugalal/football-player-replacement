@@ -10,7 +10,7 @@ export function PlayerHeader({ player }: { player: PlayerDetail }) {
         <PlayerAvatar
           photoUrl={player.photo_url}
           name={player.name}
-          size="lg"
+          size="2xl"
           className="shrink-0"
         />
         <div className="flex-1 min-w-0 space-y-4 w-full">

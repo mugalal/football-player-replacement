@@ -6,9 +6,12 @@ writes them under backend/app/static/{players,teams}/. The web app works
 fully WITHOUT this — PlayerAvatar falls back to deterministic initials when
 files are missing.
 
-Expected runtime: ~30–45 minutes for the full ~2,200-player dataset.
-Coverage seen in practice: ~70% players, ~95% teams. Resumable — existing
-files are skipped, so re-running fills gaps without re-downloading.
+Expected runtime: ~30–60 minutes for the full ~2,200-player dataset (longer
+because of the TheSportsDB fallback request on Wikidata misses).
+Coverage seen in practice: ~90%+ players (Wikidata ~70% + TheSportsDB
+fallback fills most of the rest for Big-5 men's footballers), ~95% teams.
+Resumable — existing files are skipped, so re-running fills gaps without
+re-downloading.
 
 Usage:
     pip install -r backend/requirements-scripts.txt
@@ -43,12 +46,19 @@ TEAMS_OUT = BACKEND_DIR / "app" / "static" / "teams"
 
 WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
 WIKIMEDIA_FILE = "https://commons.wikimedia.org/wiki/Special:FilePath/{name}"
+# TheSportsDB is a free community-maintained sports DB with good coverage of
+# Big-5-league male footballers from the 2010s. We use its free `searchplayers`
+# endpoint as a fallback when Wikidata returns no P18 image. The "/3/" key is
+# the documented public/test key.
+THESPORTSDB_SEARCH = "https://www.thesportsdb.com/api/v1/json/3/searchplayers.php"
 USER_AGENT = (
     "ReplacementScoutBot/0.1 (https://github.com/mugalal/football-player-replacement; "
     "academic/portfolio use)"
 )
 RATE_LIMIT_SECONDS = 1.0
-PLAYER_SIZE = (200, 200)
+# 400×400 source images stay crisp at the new xl/2xl avatar sizes (up to 176px display).
+# Existing 200×200 fetches on disk are not re-downloaded; only newly-resolved players use this.
+PLAYER_SIZE = (400, 400)
 LOGO_MAX_SIZE = (256, 256)
 JPEG_QUALITY = 85
 IMAGE_DOWNLOAD_DEADLINE_SECONDS = 45
@@ -149,15 +159,57 @@ def download_image(image_url: str) -> bytes | None:
         return None
 
 
+def thesportsdb_player_image(name: str) -> str | None:
+    """Search TheSportsDB for a footballer image URL. Returns None on miss."""
+    try:
+        r = requests.get(
+            THESPORTSDB_SEARCH,
+            params={"p": name},
+            headers={"User-Agent": USER_AGENT},
+            timeout=15,
+        )
+    except requests.RequestException as e:
+        log.warning("TheSportsDB network error: %s", e)
+        return None
+    if not r.ok:
+        return None
+    try:
+        payload = r.json()
+    except ValueError:
+        return None
+    players = payload.get("player") or []
+    # Filter to soccer/football entries, then prefer entries with a thumb.
+    for p in players:
+        sport = (p.get("strSport") or "").lower()
+        if sport not in ("soccer", "football"):
+            continue
+        for key in ("strCutout", "strThumb"):
+            url = p.get(key)
+            if url:
+                return url
+    # Last resort: any player entry with a thumb, even if sport tag is empty.
+    for p in players:
+        for key in ("strCutout", "strThumb"):
+            url = p.get(key)
+            if url:
+                return url
+    return None
+
+
 def fetch_player_photo(name: str, out_path: Path) -> bool:
     if out_path.exists():
         return True
+    # 1) Wikidata first (preferred — better metadata, freely licensed).
     rows = sparql(PLAYER_SPARQL.format(name=_escape(name)))
     time.sleep(RATE_LIMIT_SECONDS)
     image_url = next(
         (row["image"]["value"] for row in rows if "image" in row),
         None,
     )
+    # 2) Fallback to TheSportsDB if Wikidata had nothing.
+    if not image_url:
+        image_url = thesportsdb_player_image(name)
+        time.sleep(RATE_LIMIT_SECONDS)
     if not image_url:
         return False
     data = download_image(image_url)

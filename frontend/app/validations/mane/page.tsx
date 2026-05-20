@@ -4,11 +4,12 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, XCircle } from "lucid
 import Link from "next/link";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { PitchHeatmap } from "@/components/player/PitchHeatmap";
 import { ResultsTable } from "@/components/search/ResultsTable";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { getManeValidation } from "@/lib/api/validations";
+import { getManeHeatmap, getManeValidation } from "@/lib/api/validations";
 import type { Verdict } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,16 @@ export default function ManeValidationPage() {
     queryFn: getManeValidation,
     staleTime: Infinity,
     retry: false,
+  });
+
+  const { data: heatmap } = useQuery({
+    queryKey: ["mane-heatmap"],
+    queryFn: getManeHeatmap,
+    staleTime: Infinity,
+    retry: false,
+    // Don't block the page on this — the verdict is the headline; the
+    // heatmap is the "why" and can arrive a little later.
+    enabled: !!data,
   });
 
   return (
@@ -91,6 +102,46 @@ export default function ManeValidationPage() {
               candidatePool={data.candidates.length}
               defendersFiltered={data.filtered_defender_count}
             />
+
+            {heatmap && (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="mb-5 max-w-2xl">
+                    <CardTitle className="text-base">Why this works — spatial profile</CardTitle>
+                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                      The methodology recovers Mané because his on-pitch footprint matches
+                      the Liverpool 2015-16 attacking pool. Each cell is a 6×3 zone on a
+                      120×80 pitch (StatsBomb coordinates), heat-tinted by total
+                      on-ball + off-ball actions. Attacking direction is left-to-right.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <PitchHeatmap
+                      counts={heatmap.pool.counts}
+                      total={heatmap.pool.total}
+                      numX={heatmap.num_x}
+                      numY={heatmap.num_y}
+                      title="Source pool"
+                      subtitle={heatmap.pool.source_names?.join(" · ") ?? heatmap.pool.label}
+                    />
+                    {heatmap.mane.counts && heatmap.mane.counts.length > 0 ? (
+                      <PitchHeatmap
+                        counts={heatmap.mane.counts}
+                        total={heatmap.mane.total}
+                        numX={heatmap.num_x}
+                        numY={heatmap.num_y}
+                        title="Sadio Mané"
+                        subtitle="Southampton, 2015-16"
+                      />
+                    ) : (
+                      <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
+                        Mané heatmap unavailable — player not resolved in the dataset.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
               <Card>

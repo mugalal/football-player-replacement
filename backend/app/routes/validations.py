@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.deps import require_engine
 from app.services import engine
+from app.services.heatmap import NUM_ZONES, aggregate_heatmap, player_heatmap
 from app.services.mane_preset import (
     DEFENDER_POSITIONS,
     KLOPP_UPGRADES_VALIDATED,
@@ -113,3 +114,73 @@ async def mane_validation(_: None = Depends(require_engine)) -> dict[str, Any]:
             raise HTTPException(500, detail=str(e))
         _mane_cache = response
         return _mane_cache
+
+
+_mane_heatmap_cache: dict[str, Any] | None = None
+_mane_heatmap_lock = asyncio.Lock()
+
+
+@router.get("/validations/mane/heatmap")
+async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
+    """
+    Side-by-side heatmaps for the Mané validation explainer:
+      - `pool`: aggregated zone counts across the 6 Liverpool 2015-16 attackers
+      - `mane`: Mané's own zone counts
+
+    The story: same spatial profile → that's *why* the methodology recovers him.
+    """
+    global _mane_heatmap_cache
+    if _mane_heatmap_cache is not None:
+        return _mane_heatmap_cache
+    async with _mane_heatmap_lock:
+        if _mane_heatmap_cache is not None:
+            return _mane_heatmap_cache
+
+        # Resolve the 6 source player names → player_ids via the engine's
+        # name lookup (this is cheap — no model inference required, just a
+        # dict scan).
+        try:
+            source_ids: list[str] = []
+            source_names: list[str] = []
+            for name in LIVERPOOL_2015_16_ATTACKERS:
+                pid = await engine.run_engine(engine.scouting_engine.find_player_id, name)
+                if pid is None:
+                    continue
+                summary = await engine.run_engine(
+                    engine.scouting_engine.get_player_summary, pid
+                )
+                source_ids.append(pid)
+                if summary and summary.get("name"):
+                    source_names.append(summary["name"])
+
+            # Find Mané by name. The engine's matcher is plain Unicode substring;
+            # the accented form is required.
+            mane_id = await engine.run_engine(engine.scouting_engine.find_player_id, "Mané")
+
+            pool_counts = await aggregate_heatmap(source_ids)
+            mane_counts = await player_heatmap(mane_id) if mane_id else None
+
+        except FileNotFoundError as e:
+            raise HTTPException(503, detail=f"Heatmap data unavailable: {e}")
+        except Exception as e:
+            logger.exception("Mané heatmap failed")
+            raise HTTPException(500, detail=str(e))
+
+        _mane_heatmap_cache = {
+            "pool": {
+                "counts": pool_counts,
+                "total": sum(pool_counts),
+                "source_names": source_names,
+                "label": "Liverpool 2015-16 attacking pool",
+            },
+            "mane": {
+                "counts": mane_counts,
+                "total": sum(mane_counts) if mane_counts else 0,
+                "label": "Sadio Mané",
+                "player_id": mane_id,
+            },
+            "num_x": 6,
+            "num_y": 3,
+            "num_zones": NUM_ZONES,
+        }
+        return _mane_heatmap_cache

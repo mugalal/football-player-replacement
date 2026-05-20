@@ -91,3 +91,27 @@ export interface ManeValidationResponse extends SearchResponse {
   verdict_description: string;
   filtered_defender_count: number;
 }
+
+export interface PlayerHeatmap {
+  counts: number[];   // length 18, row-major from top-left, attacking L→R
+  total: number;
+  num_x: number;      // 6
+  num_y: number;      // 3
+  num_zones: number;  // 18
+}
+
+export interface HeatmapSlice {
+  counts: number[];
+  total: number;
+  label: string;
+  source_names?: string[];
+  player_id?: string | null;
+}
+
+export interface ManeHeatmapResponse {
+  pool: HeatmapSlice;
+  mane: HeatmapSlice;
+  num_x: number;
+  num_y: number;
+  num_zones: number;
+}

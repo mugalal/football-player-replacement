@@ -7,7 +7,7 @@ import { cn, initialsFromName, stableIndex } from "@/lib/utils";
 interface PlayerAvatarProps {
   photoUrl?: string | null;
   name: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
 }
 
@@ -15,6 +15,8 @@ const SIZE_CLASSES: Record<NonNullable<PlayerAvatarProps["size"]>, string> = {
   sm: "h-8 w-8 text-xs",
   md: "h-10 w-10 text-sm",
   lg: "h-20 w-20 text-2xl",
+  xl: "h-32 w-32 text-3xl ring-2",
+  "2xl": "h-44 w-44 text-5xl ring-2",
 };
 
 export function PlayerAvatar({ photoUrl, name, size = "md", className }: PlayerAvatarProps) {

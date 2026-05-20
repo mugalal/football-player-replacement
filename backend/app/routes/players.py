@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.deps import require_engine
 from app.services import engine, player_index
+from app.services.heatmap import NUM_ZONES, player_heatmap
 from app.services.images import logo_url_for, photo_url_for
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,34 @@ async def get_player(
     if summary is None:
         raise HTTPException(404, detail=f"Player not found: {player_id}")
     return _attach_images(summary, request)
+
+
+@router.get("/players/{player_id}/heatmap")
+async def player_heatmap_endpoint(
+    player_id: str,
+    _: None = Depends(require_engine),
+) -> dict[str, Any]:
+    """
+    Return a 6×3 pitch-zone activity heatmap for a player.
+
+    Aggregates the start-zone of every structured token (on-ball + off-ball)
+    across all of the player's matches in the dataset. Pure modifier tokens
+    (e.g. `progressive_pass`, `cut_inside_right`) have no zone and are skipped.
+
+    Response: {counts: int[18], total: int, num_x: 6, num_y: 3} — counts are
+    indexed row-major from the top-left of the StatsBomb pitch (120×80,
+    attacking left-to-right).
+    """
+    try:
+        counts = await player_heatmap(player_id)
+    except FileNotFoundError as e:
+        raise HTTPException(503, detail=f"Heatmap data unavailable: {e}")
+    except Exception as e:
+        logger.exception("heatmap failed")
+        raise HTTPException(500, detail=str(e))
+    if counts is None:
+        raise HTTPException(404, detail=f"Player not found: {player_id}")
+    return {"counts": counts, "total": sum(counts), "num_x": 6, "num_y": 3, "num_zones": NUM_ZONES}
 
 
 @router.get("/players/{player_id}/similar")
