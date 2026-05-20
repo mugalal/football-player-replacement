@@ -108,9 +108,22 @@ export interface HeatmapSlice {
   player_id?: string | null;
 }
 
+export interface CandidateHeatmap {
+  player_id: string;
+  name: string;
+  primary_position: string;
+  team: string;
+  similarity: number;
+  attacker_rank: number;
+  counts: number[];
+  total: number;
+  is_mane: boolean;
+}
+
 export interface ManeHeatmapResponse {
   pool: HeatmapSlice;
   mane: HeatmapSlice;
+  top_candidates: CandidateHeatmap[];
   num_x: number;
   num_y: number;
   num_zones: number;

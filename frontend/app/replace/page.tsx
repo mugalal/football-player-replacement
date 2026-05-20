@@ -8,8 +8,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { FilterSidebar, DEFAULT_FILTERS, filterStateToBackend, type FilterState } from "@/components/search/FilterSidebar";
 import { IntensityControl } from "@/components/search/IntensityControl";
 import { PlayerAutocomplete } from "@/components/search/PlayerAutocomplete";
-import { PlayerCard } from "@/components/search/PlayerCard";
 import { ResultsTable } from "@/components/search/ResultsTable";
+import { SourcePlayerHero } from "@/components/search/SourcePlayerHero";
 import { UpgradePicker } from "@/components/search/UpgradePicker";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/lib/hooks/useSearch";
@@ -85,7 +85,7 @@ export default function ReplacePage() {
                 Source player
               </h3>
               {source ? (
-                <PlayerCard
+                <SourcePlayerHero
                   player={source}
                   onRemove={() => {
                     setSource(null);

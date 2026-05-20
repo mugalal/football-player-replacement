@@ -123,11 +123,16 @@ _mane_heatmap_lock = asyncio.Lock()
 @router.get("/validations/mane/heatmap")
 async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
     """
-    Side-by-side heatmaps for the Mané validation explainer:
+    Heatmaps for the Mané validation explainer:
       - `pool`: aggregated zone counts across the 6 Liverpool 2015-16 attackers
       - `mane`: Mané's own zone counts
+      - `top_candidates`: heatmaps for the top 5 attacking candidates the
+        methodology surfaced (defenders filtered out). Lets the user see
+        that all 5 share a similar spatial profile — visual proof of the
+        ranking.
 
-    The story: same spatial profile → that's *why* the methodology recovers him.
+    Depends on the main /api/validations/mane having been computed (or
+    computes it on demand) so we know who the top-5 attackers are.
     """
     global _mane_heatmap_cache
     if _mane_heatmap_cache is not None:
@@ -160,6 +165,34 @@ async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
             pool_counts = await aggregate_heatmap(source_ids)
             mane_counts = await player_heatmap(mane_id) if mane_id else None
 
+            # Top-5 attacking candidates: reuse the main validation result.
+            # If it hasn't been computed yet, compute it now (single inference,
+            # then cached for both endpoints).
+            global _mane_cache
+            validation = _mane_cache
+            if validation is None:
+                validation = await _compute()
+                _mane_cache = validation
+            top_candidates = []
+            for c in (validation.get("candidates") or [])[:5]:
+                cid = c.get("player_id")
+                if not cid:
+                    continue
+                counts = await player_heatmap(str(cid))
+                if counts is None:
+                    continue
+                top_candidates.append({
+                    "player_id": cid,
+                    "name": c.get("name"),
+                    "primary_position": c.get("primary_position"),
+                    "team": c.get("team"),
+                    "similarity": c.get("similarity"),
+                    "attacker_rank": c.get("attacker_rank"),
+                    "counts": counts,
+                    "total": sum(counts),
+                    "is_mane": "Mané" in (c.get("name") or ""),
+                })
+
         except FileNotFoundError as e:
             raise HTTPException(503, detail=f"Heatmap data unavailable: {e}")
         except Exception as e:
@@ -179,6 +212,7 @@ async def mane_heatmap(_: None = Depends(require_engine)) -> dict[str, Any]:
                 "label": "Sadio Mané",
                 "player_id": mane_id,
             },
+            "top_candidates": top_candidates,
             "num_x": 6,
             "num_y": 3,
             "num_zones": NUM_ZONES,

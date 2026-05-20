@@ -49,13 +49,16 @@ export function PlayerAvatar({ photoUrl, name, size = "md", className }: PlayerA
     <div
       aria-label={name}
       className={cn(
-        "inline-flex items-center justify-center rounded-full font-semibold text-white ring-1 ring-border select-none",
+        // Subtle vertical gradient gives the initials more weight at larger sizes.
+        "inline-flex items-center justify-center rounded-full font-semibold text-white select-none",
+        "bg-gradient-to-b from-white/10 to-black/15 shadow-inner",
+        "ring-1 ring-white/10",
         color,
         SIZE_CLASSES[size],
         className,
       )}
     >
-      {initials}
+      <span className="drop-shadow-sm">{initials}</span>
     </div>
   );
 }

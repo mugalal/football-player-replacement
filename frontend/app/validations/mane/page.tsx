@@ -104,43 +104,97 @@ export default function ManeValidationPage() {
             />
 
             {heatmap && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="mb-5 max-w-2xl">
-                    <CardTitle className="text-base">Why this works — spatial profile</CardTitle>
-                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                      The methodology recovers Mané because his on-pitch footprint matches
-                      the Liverpool 2015-16 attacking pool. Each cell is a 6×3 zone on a
-                      120×80 pitch (StatsBomb coordinates), heat-tinted by total
-                      on-ball + off-ball actions. Attacking direction is left-to-right.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <PitchHeatmap
-                      counts={heatmap.pool.counts}
-                      total={heatmap.pool.total}
-                      numX={heatmap.num_x}
-                      numY={heatmap.num_y}
-                      title="Source pool"
-                      subtitle={heatmap.pool.source_names?.join(" · ") ?? heatmap.pool.label}
-                    />
-                    {heatmap.mane.counts && heatmap.mane.counts.length > 0 ? (
+              <>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="mb-5 max-w-2xl">
+                      <CardTitle className="text-base">Why this works — spatial profile</CardTitle>
+                      <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                        The methodology recovers Mané because his on-pitch footprint matches
+                        the Liverpool 2015-16 attacking pool. Each cell is a 6×3 zone on a
+                        120×80 pitch (StatsBomb coordinates), heat-tinted by total
+                        on-ball + off-ball actions. Attacking direction is left-to-right.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <PitchHeatmap
-                        counts={heatmap.mane.counts}
-                        total={heatmap.mane.total}
+                        counts={heatmap.pool.counts}
+                        total={heatmap.pool.total}
                         numX={heatmap.num_x}
                         numY={heatmap.num_y}
-                        title="Sadio Mané"
-                        subtitle="Southampton, 2015-16"
+                        title="Source pool"
+                        subtitle={heatmap.pool.source_names?.join(" · ") ?? heatmap.pool.label}
                       />
-                    ) : (
-                      <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
-                        Mané heatmap unavailable — player not resolved in the dataset.
+                      {heatmap.mane.counts && heatmap.mane.counts.length > 0 ? (
+                        <PitchHeatmap
+                          counts={heatmap.mane.counts}
+                          total={heatmap.mane.total}
+                          numX={heatmap.num_x}
+                          numY={heatmap.num_y}
+                          title="Sadio Mané"
+                          subtitle="Southampton, 2015-16"
+                        />
+                      ) : (
+                        <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
+                          Mané heatmap unavailable — player not resolved in the dataset.
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {heatmap.top_candidates && heatmap.top_candidates.length > 0 && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="mb-5 max-w-2xl">
+                        <CardTitle className="text-base">Top 5 candidates — spatial check</CardTitle>
+                        <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                          Heatmaps for the 5 attackers the methodology surfaced first.
+                          All five share the same wide-attacking footprint as the source
+                          pool — that&apos;s exactly the signal the ranking is picking up.
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {heatmap.top_candidates.map((c) => (
+                          <Link
+                            key={c.player_id}
+                            href={`/player/${encodeURIComponent(c.player_id)}`}
+                            className={cn(
+                              "block rounded-lg border p-3 transition-colors hover:bg-accent/40",
+                              c.is_mane
+                                ? "border-primary/50 bg-primary/5 hover:bg-primary/10"
+                                : "border-border",
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[11px] font-mono bg-muted text-muted-foreground" data-numeric>
+                                #{c.attacker_rank}
+                              </span>
+                              <span className="font-mono text-[10px] text-muted-foreground tabular-nums" data-numeric>
+                                {(c.similarity * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <PitchHeatmap
+                              counts={c.counts}
+                              total={c.total}
+                              numX={heatmap.num_x}
+                              numY={heatmap.num_y}
+                            />
+                            <div className="mt-2.5">
+                              <div className="text-xs font-medium truncate" title={c.name}>
+                                {c.name}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                {c.primary_position} · {c.team}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
