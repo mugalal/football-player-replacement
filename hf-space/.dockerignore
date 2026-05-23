@@ -25,8 +25,10 @@ Thumbs.db
 node_modules/
 .next/
 
-# Generated static images — the runtime initials fallback handles their absence.
-backend/app/static/players/*
-backend/app/static/teams/*
-!backend/app/static/players/.gitkeep
-!backend/app/static/teams/.gitkeep
+# Static photos and team logos ARE included in the deployed image.
+# They live at backend/app/static/players/*.jpg and teams/*.png and need
+# to be served by FastAPI's static mount. The deploying user should
+# commit them to the Space repo via Git LFS so they:
+#   1) push reliably without bloating non-LFS git history, and
+#   2) get COPY'd into the Docker image during build.
+# (No exclusion rules here — letting Docker include them on purpose.)

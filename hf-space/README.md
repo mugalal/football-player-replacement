@@ -45,16 +45,22 @@ repo** (a separate repo from this one):
    Copy-Item <this-repo>\models   .\models   -Recurse
    ```
 
-4. **Set up Git LFS** for the model files (~152 MB of runtime artifacts;
-   pure-`git` would push them as ordinary blobs and blow up the Space's
-   storage quota):
+4. **Set up Git LFS** for the model files (~152 MB of runtime artifacts)
+   AND the static photos/logos (~150 MB if fully populated). Pure-`git`
+   would push these as ordinary blobs and blow up the Space's storage
+   quota:
 
    ```powershell
    git lfs install
+   # Model artifacts
    git lfs track "models/**"
    git lfs track "*.model"
    git lfs track "*.npz"
    git lfs track "*.jsonl"
+   # Static photos and team logos (so deployed UI shows real photos,
+   # not just the initials fallback)
+   git lfs track "backend/app/static/players/*.jpg"
+   git lfs track "backend/app/static/teams/*.png"
    git add .gitattributes
    ```
 
